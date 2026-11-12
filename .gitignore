@@ -67,3 +67,22 @@ env
 venv
 .env
 .venv
+
+# ---- Semester investigation (SQM) additions ----
+# macOS
+.DS_Store
+# pytest / tool caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+# models saved by experiments / serving tests
+saved_models/
+# MovieLens & other downloaded datasets (GroupLens terms: no redistribution)
+ml-100k/
+ml-1m/
+*.dat
+# local run outputs (paste the relevant parts into LAB5_SELECTION.md instead)
+*_output.txt
+pytest_baseline.txt
+env_info.txt
