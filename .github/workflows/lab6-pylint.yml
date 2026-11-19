@@ -1,0 +1,104 @@
+# Lab #6 - Pylint analysis of cornac/eval_methods (GQM object).
+# Copy to .github/workflows/lab6-pylint.yml in the fork.
+# Adapted from the course example examples/lab6-python-ruff.yml.
+#
+# Rules = the smells selected in LAB6_ANALYSIS.md, Task 1:
+#   R0801 duplicate-code                 -> Duplicated Code (Q1)
+#   R0902 too-many-instance-attributes   -> Large Class (Q2)
+#   R0904 too-many-public-methods        -> Large Class (Q2)
+#   R1260 too-complex (mccabe extension) -> method complexity, summed per class = WMC (Q2)
+# Divergent Change has no rule: investigated by inspection + GitHub file history.
+# Findings are symptoms, not confirmed smells. Only .py files are analyzed (no Cython .pyx).
+name: Lab6 - Pylint
+
+on:
+  push:
+    branches:
+      - semester-investigation
+      - 'lab6-*'
+
+permissions:
+  contents: read
+
+jobs:
+  pylint-analysis:
+    runs-on: ubuntu-24.04
+    env:
+      SOURCE_PATH: cornac/eval_methods
+    steps:
+      - name: Check out this exact revision
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install analyzer only (not Cornac or its ML dependencies)
+        run: |
+          python -m pip install 'pylint==3.3.7'
+          pylint --version
+          echo "Analyzed revision: $GITHUB_SHA"
+          mkdir -p lab6-reports
+
+      # Default thresholds are kept and documented:
+      #   duplicate-code: min-similarity-lines=4, comments/docstrings/imports ignored
+      #   too-many-instance-attributes: max-attributes=7
+      #   too-many-public-methods: max-public-methods=20
+      - name: Smell findings (Duplicated Code, Large Class) - readable log
+        run: |
+          pylint "$SOURCE_PATH" \
+            --disable=all \
+            --enable=duplicate-code,too-many-instance-attributes,too-many-public-methods \
+            --score=n --exit-zero \
+            | tee lab6-reports/pylint-smells.txt
+
+      # --max-complexity=0 makes R1260 report the McCabe complexity of EVERY
+      # function/method, not only those above a threshold -> needed to sum WMC.
+      - name: Complexity of every function/method (JSON)
+        run: |
+          pylint "$SOURCE_PATH" \
+            --disable=all --enable=too-complex \
+            --load-plugins=pylint.extensions.mccabe --max-complexity=0 \
+            --score=n --exit-zero \
+            --output-format=json > lab6-reports/pylint-complexity.json
+          echo "complexity messages: $(python -c "import json;print(len(json.load(open('lab6-reports/pylint-complexity.json'))))")"
+
+      # Class-level metrics for Large Class / Divergent Change (slides 38-42):
+      # LOC and number of methods from the source (Python ast),
+      # WMC = sum of the McCabe complexity of the class's own methods (Pylint).
+      - name: Class metrics table (LOC, methods, WMC)
+        run: |
+          python - <<'EOF' | tee lab6-reports/class-metrics.txt
+          import ast, json, pathlib
+          cc = {}
+          for m in json.load(open("lab6-reports/pylint-complexity.json")):
+              # message format: "'name' is too complex. The McCabe rating is N"
+              # keyed by file + line, so a property getter and its setter
+              # (same name) are counted separately
+              cc[(m["path"], m["line"])] = int(m["message"].rsplit(" ", 1)[1])
+          rows = []
+          for f in sorted(pathlib.Path("cornac/eval_methods").glob("*.py")):
+              tree = ast.parse(f.read_text())
+              for node in tree.body:
+                  if not isinstance(node, ast.ClassDef):
+                      continue
+                  methods = [n for n in node.body
+                             if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+                  public = [n for n in methods if not n.name.startswith("_")]
+                  wmc = sum(cc.get((str(f), n.lineno), 0) for n in methods)
+                  loc = node.end_lineno - node.lineno + 1
+                  rows.append((wmc, node.name, str(f), node.lineno, loc, len(methods), len(public)))
+          print(f"{'class':32} {'file:line':52} {'LOC':>5} {'meth':>5} {'pub':>5} {'WMC':>5}")
+          for wmc, name, f, line, loc, n, p in sorted(rows, reverse=True):
+              print(f"{name:32} {f + ':' + str(line):52} {loc:5} {n:5} {p:5} {wmc:5}")
+          EOF
+
+      - name: Upload reports (time-limited artifact)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lab6-pylint-report
+          path: lab6-reports/
+          if-no-files-found: warn
+          retention-days: 30
