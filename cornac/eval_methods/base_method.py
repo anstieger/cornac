@@ -695,6 +695,28 @@ class BaseMethod:
 
         return Result(model.name, metric_avg_results, metric_user_results)
 
+    def _fit_model(self, model):
+        """Train `model` on the training set, using the validation set (if any)
+        for model selection. Shared training step of `evaluate()` in BaseMethod
+        and its subclasses.
+
+        Parameters
+        ----------
+        model: :obj:`cornac.models.Recommender`
+            Recommender model to be trained.
+
+        Returns
+        -------
+        train_time: float
+            Training time in seconds.
+        """
+        if self.verbose:
+            print("\n[{}] Training started!".format(model.name))
+
+        start = time.time()
+        model.fit(self.train_set, self.val_set)
+        return time.time() - start
+
     def evaluate(self, model, metrics, user_based, show_validation=True):
         """Evaluate given models according to given metrics. Supposed to be called by Experiment.
 
@@ -727,12 +749,7 @@ class BaseMethod:
         ###########
         # FITTING #
         ###########
-        if self.verbose:
-            print("\n[{}] Training started!".format(model.name))
-
-        start = time.time()
-        model.fit(self.train_set, self.val_set)
-        train_time = time.time() - start
+        train_time = self._fit_model(model)
 
         ##############
         # EVALUATION #
