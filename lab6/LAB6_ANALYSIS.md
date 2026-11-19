@@ -134,6 +134,6 @@ All 21 metric values are identical to the baseline; only the wall-clock times di
 | Antonia Stieger / [anstieger](https://github.com/anstieger) | C1 | Extract Method `BaseMethod._fit_model` (training step of `evaluate()` in 3 classes) | https://github.com/anstieger/cornac/commit/706a1ac2d77aedf0d79eb4780477a77b7786cdaf | Pylint + Tests push runs: https://github.com/anstieger/cornac/actions/runs/44545715336 , https://github.com/anstieger/cornac/actions/runs/44545715214 |
 
 **Completed template location on `semester-investigation`:** https://github.com/anstieger/cornac/blob/semester-investigation/lab6/LAB6_ANALYSIS.md  
-**Template/report commit link:** [TODO: `/commit/FULL_SHA` link of the final commit that adds this file to `semester-investigation`]
+**Template/report commit link:** https://github.com/anstieger/cornac/commit/e9237bee008a4c6e60a03314b16a60bd243c6840
 
 **Evidence preservation note:** The Pylint artifacts (`lab6-pylint-report`) of the baseline and the after run are committed in `lab6/lab6-pylint-report/` and `lab6/lab6-pylint-report-after/`; the essential figures (R0801 counts, class metrics, test results, example tables) are copied into this file because Actions artifacts expire after 30 days.
