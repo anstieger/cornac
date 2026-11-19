@@ -1,0 +1,459 @@
+************* Module cornac.eval_methods.base_method
+cornac/eval_methods/base_method.py:229:0: R0902: Too many instance attributes (32/7) (too-many-instance-attributes)
+************* Module cornac.eval_methods.cross_validation
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.base_method:[756:771]
+==cornac.eval_methods.next_item_evaluation:[404:419]
+            verbose=self.verbose,
+        )
+        test_time = time.time() - start
+        test_result.metric_avg_results["Train (s)"] = train_time
+        test_result.metric_avg_results["Test (s)"] = test_time
+
+        val_result = None
+        if show_validation and self.val_set is not None:
+            start = time.time()
+            model.transform(self.val_set)
+            val_result = self.eval(
+                model=model,
+                train_set=self.train_set,
+                test_set=self.val_set,
+                val_set=None, (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.base_method:[719:744]
+==cornac.eval_methods.next_item_evaluation:[366:390]
+        if self.train_set is None:
+            raise ValueError("train_set is required but None!")
+        if self.test_set is None:
+            raise ValueError("test_set is required but None!")
+
+        self._reset()
+
+        ###########
+        # FITTING #
+        ###########
+        if self.verbose:
+            print("\n[{}] Training started!".format(model.name))
+
+        start = time.time()
+        model.fit(self.train_set, self.val_set)
+        train_time = time.time() - start
+
+        ##############
+        # EVALUATION #
+        ##############
+        if self.verbose:
+            print("\n[{}] Evaluation started!".format(model.name))
+
+        rating_metrics, ranking_metrics = self.organize_metrics(metrics) (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.base_method:[491:503]
+==cornac.eval_methods.next_basket_evaluation:[293:305]
+            data=train_data,
+            fmt=self.fmt,
+            global_uid_map=self.global_uid_map,
+            global_iid_map=self.global_iid_map,
+            seed=self.seed,
+            exclude_unknowns=False,
+        )
+        if self.verbose:
+            print("---")
+            print("Training data:")
+            print("Number of users = {}".format(self.train_set.num_users))
+            print("Number of items = {}".format(self.train_set.num_items)) (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.base_method:[522:534]
+==cornac.eval_methods.next_basket_evaluation:[321:333]
+            print(
+                "Number of unknown users = {}".format(
+                    self.test_set.num_users - self.train_set.num_users
+                )
+            )
+            print(
+                "Number of unknown items = {}".format(
+                    self.test_set.num_items - self.train_set.num_items
+                )
+            )
+
+        if val_data is not None and len(val_data) > 0: (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.next_basket_evaluation:[134:145]
+==cornac.eval_methods.next_item_evaluation:[126:137]
+            extra_data=test_set.extra_data,
+        )
+
+        for i, mt in enumerate(metrics):
+            mt_score = mt.compute(
+                gt_pos=u_gt_pos_items,
+                gt_neg=u_gt_neg_items,
+                pd_rank=item_rank,
+                pd_scores=item_scores,
+                item_indices=item_indices,
+            ) (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.next_basket_evaluation:[93:108]
+==cornac.eval_methods.next_item_evaluation:[103:119]
+        u_gt_pos_mask = np.zeros(test_set.num_items, dtype="int")
+        u_gt_pos_mask[test_pos_items] = 1
+
+        # binary mask for ground-truth negative items, removing all positive items
+        u_gt_neg_mask = np.ones(test_set.num_items, dtype="int")
+        u_gt_neg_mask[test_pos_items] = 0
+
+        # filter items being considered for evaluation
+        if exclude_unknowns:
+            u_gt_pos_mask = u_gt_pos_mask[: train_set.num_items]
+            u_gt_neg_mask = u_gt_neg_mask[: train_set.num_items]
+
+        u_gt_pos_items = np.nonzero(u_gt_pos_mask)[0]
+        u_gt_neg_items = np.nonzero(u_gt_neg_mask)[0]
+        item_indices = np.nonzero(u_gt_pos_mask + u_gt_neg_mask)[0] (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.stratified_split:[75:85]
+==cornac.eval_methods.timestamp_split:[98:108]
+        super().__init__(
+            data=data,
+            fmt=fmt,
+            rating_threshold=rating_threshold,
+            seed=seed,
+            exclude_unknowns=exclude_unknowns,
+            verbose=verbose,
+            **kwargs
+        )
+ (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.next_basket_evaluation:[157:166]
+==cornac.eval_methods.next_item_evaluation:[127:137]
+            )
+
+            for i, mt in enumerate(metrics):
+                mt_score = mt.compute(
+                    gt_pos=u_gt_pos_items,
+                    gt_neg=u_gt_neg_items,
+                    pd_rank=item_rank,
+                    pd_scores=item_scores,
+                    item_indices=item_indices,
+                ) (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.base_method:[209:219]
+==cornac.eval_methods.next_basket_evaluation:[135:145]
+        )
+
+        for i, mt in enumerate(metrics):
+            mt_score = mt.compute(
+                gt_pos=u_gt_pos_items,
+                gt_neg=u_gt_neg_items,
+                pd_rank=item_rank,
+                pd_scores=item_scores,
+                item_indices=item_indices,
+            ) (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.base_method:[165:176]
+==cornac.eval_methods.propensity_stratified_evaluation:[74:85]
+    train_mat = train_set.csr_matrix
+    val_mat = None if val_set is None else val_set.csr_matrix
+
+    def pos_items(csr_row):
+        return [
+            item_idx
+            for (item_idx, rating) in zip(csr_row.indices, csr_row.data)
+            if rating >= rating_threshold
+        ]
+
+    test_user_indices = set(test_set.uir_tuple[0]) (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.next_basket_evaluation:[338:346]
+==cornac.eval_methods.next_item_evaluation:[288:296]
+                seed=self.seed,
+                exclude_unknowns=self.exclude_unknowns,
+            )
+            if self.verbose:
+                print("---")
+                print("Validation data:")
+                print("Number of users = {}".format(len(self.val_set.uid_map)))
+                print("Number of items = {}".format(len(self.val_set.iid_map))) (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.next_basket_evaluation:[312:320]
+==cornac.eval_methods.next_item_evaluation:[269:277]
+            seed=self.seed,
+            exclude_unknowns=self.exclude_unknowns,
+        )
+        if self.verbose:
+            print("---")
+            print("Test data:")
+            print("Number of users = {}".format(len(self.test_set.uid_map)))
+            print("Number of items = {}".format(len(self.test_set.iid_map))) (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.next_basket_evaluation:[297:305]
+==cornac.eval_methods.next_item_evaluation:[253:261]
+            seed=self.seed,
+            exclude_unknowns=False,
+        )
+        if self.verbose:
+            print("---")
+            print("Training data:")
+            print("Number of users = {}".format(self.train_set.num_users))
+            print("Number of items = {}".format(self.train_set.num_items)) (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.base_method:[510:518]
+==cornac.eval_methods.next_basket_evaluation:[335:343]
+                fmt=self.fmt,
+                global_uid_map=self.global_uid_map,
+                global_iid_map=self.global_iid_map,
+                seed=self.seed,
+                exclude_unknowns=self.exclude_unknowns,
+            )
+            if self.verbose:
+                print("---") (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.base_method:[536:544]
+==cornac.eval_methods.next_basket_evaluation:[309:317]
+                fmt=self.fmt,
+                global_uid_map=self.global_uid_map,
+                global_iid_map=self.global_iid_map,
+                seed=self.seed,
+                exclude_unknowns=self.exclude_unknowns,
+            )
+            if self.verbose:
+                print("---") (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.cross_validation:[64:71]
+==cornac.eval_methods.propensity_stratified_evaluation:[182:189]
+        BaseMethod.__init__(
+            self,
+            data=data,
+            rating_threshold=rating_threshold,
+            seed=seed,
+            exclude_unknowns=exclude_unknowns,
+            verbose=verbose, (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.base_method:[776:835]
+==cornac.eval_methods.next_item_evaluation:[423:483]
+                verbose=self.verbose,
+            )
+            val_time = time.time() - start
+            val_result.metric_avg_results["Time (s)"] = val_time
+
+        return test_result, val_result
+
+    @classmethod
+    def from_splits(
+        cls,
+        train_data,
+        test_data,
+        val_data=None,
+        fmt="SIT",
+        exclude_unknowns=False,
+        seed=None,
+        verbose=False,
+        **kwargs,
+    ):
+        """Constructing evaluation method given data.
+
+        Parameters
+        ----------
+        train_data: array-like
+            Training data
+
+        test_data: array-like
+            Test data
+
+        val_data: array-like, optional, default: None
+            Validation data
+
+        fmt: str, default: 'SIT'
+            Format of the input data. Currently, we are supporting:
+
+            'SIT': Session, Item, Timestamp
+            'USIT': User, Session, Item, Timestamp
+            'SITJson': Session, Item, Timestamp, Json
+            'USITJson': User, Session, Item, Timestamp, Json
+
+        rating_threshold: float, default: 1.0
+            Threshold to decide positive or negative preferences.
+
+        exclude_unknowns: bool, default: False
+            Whether to exclude unknown users/items in evaluation.
+
+        seed: int, optional, default: None
+            Random seed for reproduce the splitting.
+
+        verbose: bool, default: False
+            The verbosity flag.
+
+        Returns
+        -------
+        method: :obj:`<cornac.eval_methods.NextItemEvaluation>`
+            Evaluation method object.
+
+        """
+        method = cls(
+            fmt=fmt, (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.base_method:[744:751]
+==cornac.eval_methods.next_item_evaluation:[393:400]
+        start = time.time()
+        model.transform(self.test_set)
+        test_result = self.eval(
+            model=model,
+            train_set=self.train_set,
+            test_set=self.test_set,
+            val_set=self.val_set, (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.base_method:[729:742]
+==cornac.eval_methods.propensity_stratified_evaluation:[363:377]
+        if self.verbose:
+            print("\n[{}] Training started!".format(model.name))
+
+        start = time.time()
+        model.fit(self.train_set, self.val_set)
+        train_time = time.time() - start
+
+        ##############
+        # EVALUATION #
+        ##############
+        if self.verbose:
+            print("\n[{}] Evaluation started!".format(model.name))
+
+        # evaluate on the sampled test set (closed-loop) (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.propensity_stratified_evaluation:[235:245]
+==cornac.eval_methods.ratio_split:[116:125]
+        data_idx = self.rng.permutation(len(self.data))
+        train_idx = data_idx[: self.train_size]
+        test_idx = data_idx[-self.test_size :]
+        val_idx = data_idx[self.train_size : -self.test_size]
+
+        train_data = safe_indexing(self.data, train_idx)
+        test_data = safe_indexing(self.data, test_idx)
+        val_data = safe_indexing(self.data, val_idx) if len(val_idx) > 0 else None
+
+        # build train/test/valid datasets (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.propensity_stratified_evaluation:[184:192]
+==cornac.eval_methods.ratio_split:[65:73]
+            data=data,
+            rating_threshold=rating_threshold,
+            seed=seed,
+            exclude_unknowns=exclude_unknowns,
+            verbose=verbose,
+            **kwargs,
+        )
+ (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.cross_validation:[67:74]
+==cornac.eval_methods.stratified_split:[78:85]
+            rating_threshold=rating_threshold,
+            seed=seed,
+            exclude_unknowns=exclude_unknowns,
+            verbose=verbose,
+            **kwargs
+        )
+ (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.base_method:[689:719]
+==cornac.eval_methods.next_item_evaluation:[329:360]
+            verbose=verbose,
+        )
+
+        for i, mt in enumerate(ranking_metrics):
+            metric_avg_results[mt.name] = avg_results[i]
+            metric_user_results[mt.name] = user_results[i]
+
+        return Result(model.name, metric_avg_results, metric_user_results)
+
+    def evaluate(self, model, metrics, user_based, show_validation=True):
+        """Evaluate given models according to given metrics. Supposed to be called by Experiment.
+
+        Parameters
+        ----------
+        model: :obj:`cornac.models.NextItemRecommender`
+            NextItemRecommender model to be evaluated.
+
+        metrics: :obj:`iterable`
+            List of metrics.
+
+        user_based: bool, required
+            Evaluation strategy for the rating metrics. Whether results
+            are averaging based on number of users or number of ratings.
+
+        show_validation: bool, optional, default: True
+            Whether to show the results on validation set (if exists).
+
+        Returns
+        -------
+        res: :obj:`cornac.experiment.Result`
+        """ (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.next_basket_evaluation:[261:267]
+==cornac.eval_methods.next_item_evaluation:[230:236]
+            test_size=test_size,
+            val_size=val_size,
+            fmt=fmt,
+            seed=seed,
+            exclude_unknowns=exclude_unknowns,
+            verbose=verbose, (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.base_method:[681:686]
+==cornac.eval_methods.next_item_evaluation:[321:326]
+        avg_results, user_results = ranking_eval(
+            model=model,
+            metrics=ranking_metrics,
+            train_set=train_set,
+            test_set=test_set, (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.base_method:[719:729]
+==cornac.eval_methods.propensity_stratified_evaluation:[352:358]
+        if self.train_set is None:
+            raise ValueError("train_set is required but None!")
+        if self.test_set is None:
+            raise ValueError("test_set is required but None!")
+
+        self._reset() (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.next_basket_evaluation:[357:363]
+==cornac.eval_methods.next_item_evaluation:[318:324]
+        metric_avg_results = OrderedDict()
+        metric_user_results = OrderedDict()
+
+        avg_results, user_results = ranking_eval(
+            model=model,
+            metrics=ranking_metrics, (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.base_method:[535:547]
+==cornac.eval_methods.next_basket_evaluation:[334:346]
+                data=val_data,
+                fmt=self.fmt,
+                global_uid_map=self.global_uid_map,
+                global_iid_map=self.global_iid_map,
+                seed=self.seed,
+                exclude_unknowns=self.exclude_unknowns,
+            )
+            if self.verbose:
+                print("---")
+                print("Validation data:")
+                print("Number of users = {}".format(len(self.val_set.uid_map)))
+                print("Number of items = {}".format(len(self.val_set.iid_map))) (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.base_method:[509:521]
+==cornac.eval_methods.next_basket_evaluation:[308:320]
+            data=test_data,
+            fmt=self.fmt,
+            global_uid_map=self.global_uid_map,
+            global_iid_map=self.global_iid_map,
+            seed=self.seed,
+            exclude_unknowns=self.exclude_unknowns,
+        )
+        if self.verbose:
+            print("---")
+            print("Test data:")
+            print("Number of users = {}".format(len(self.test_set.uid_map)))
+            print("Number of items = {}".format(len(self.test_set.iid_map))) (duplicate-code)
+cornac/eval_methods/cross_validation.py:1:0: R0801: Similar lines in 2 files
+==cornac.eval_methods.cross_validation:[66:71]
+==cornac.eval_methods.ratio_split:[65:70]
+            data=data,
+            rating_threshold=rating_threshold,
+            seed=seed,
+            exclude_unknowns=exclude_unknowns,
+            verbose=verbose, (duplicate-code)
