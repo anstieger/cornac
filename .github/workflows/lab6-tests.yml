@@ -1,0 +1,52 @@
+# Lab #6 - scoped regression check for refactoring R1 (issue C1):
+# extracting the training step of evaluate() in BaseMethod, NextItemEvaluation and
+# PropensityStratifiedEvaluation (cornac/eval_methods).
+# Runs only the tests that exercise these classes + Cornac's official first example,
+# on one Linux runner and one Python version (the upstream "master" workflow runs a
+# 15-job OS x Python matrix and only on master). Cython extensions are built because
+# `import cornac` loads compiled modules. MovieLens 100K (~5 MB) is downloaded at
+# runtime by the example and one existing test (GroupLens terms) and never committed.
+name: Lab6 - Tests
+
+on:
+  push:
+    branches:
+      - semester-investigation
+      - 'lab6-*'
+
+permissions:
+  contents: read
+
+jobs:
+  eval-methods-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out this exact revision
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install build + test dependencies
+        run: |
+          python -m pip install --upgrade pip wheel setuptools
+          python -m pip install Cython pytest "numpy>2.0.0" scipy
+
+      - name: Build extensions and install Cornac from this source revision
+        run: |
+          python setup.py build_ext -j4
+          python -m pip install -e .[tests]
+          python -c "import cornac, numpy; print('cornac', cornac.__version__, 'numpy', numpy.__version__)"
+
+      - name: Run tests of the refactored area (eval_methods + experiment)
+        run: |
+          echo "Revision: $GITHUB_SHA"
+          python -m pytest tests/cornac/eval_methods tests/cornac/experiment -v -p no:cacheprovider
+
+      - name: Run the official first example (RatioSplit -> BaseMethod.evaluate, seed 123)
+        run: |
+          cp examples/first_example.py first_example.py
+          python first_example.py
