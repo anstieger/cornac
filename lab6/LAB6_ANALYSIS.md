@@ -90,22 +90,40 @@
 
 ## Task 4 - Refactor, Verify, and Commit
 
-**Baseline test/check run(s) on GitHub:** [URL(s) and outcomes]  
-**After-refactoring SHA(s):** [full SHA(s)]  
-**After-refactoring scan / workflow run(s):** [URL(s)]  
-**After-refactoring test/check run(s):** [URL(s) and outcomes]
+**Baseline test/check run(s) on GitHub:** *Lab6 - Tests* on `cd695f2bddec4f24f98ebe18e01d4059c9d1bbc8` (adds only the test workflow + record; `cornac/` source identical to the Pylint baseline `a490b5eb`): https://github.com/anstieger/cornac/actions/runs/44541698061 - **green**: `58 passed, 1 warning` (`tests/cornac/eval_methods` + `tests/cornac/experiment`).
+
+Baseline output of `examples/first_example.py` (step "Run the official first example", MovieLens 100K, `RatioSplit(test_size=0.2, rating_threshold=4.0, seed=123)`). Same values as my local Lab 5 run (`f1_output.txt`):
+
+| Model | MAE | RMSE | AUC | MAP | NDCG@10 | Precision@10 | Recall@10 | Train (s) | Test (s) |
+|---|---|---|---|---|---|---|---|---|---|
+| MF | 0.7430 | 0.8998 | 0.7445 | 0.0548 | 0.0761 | 0.0675 | 0.0463 | 0.0330 | 1.1681 |
+| PMF | 0.7534 | 0.9138 | 0.7744 | 0.0671 | 0.0969 | 0.0813 | 0.0639 | 1.7642 | 0.9728 |
+| BPR | 2.0143 | 2.2267 | 0.8695 | 0.1042 | 0.1500 | 0.1110 | 0.1195 | 1.6122 | 1.1432 |
+
+(`Train (s)`/`Test (s)` are wall-clock times and vary between runs; only the metric columns are expected to be identical after refactoring.)
+
+**After-refactoring SHA(s):** `706a1ac2d77aedf0d79eb4780477a77b7786cdaf` (branch `lab6-anstieger`) - https://github.com/anstieger/cornac/commit/706a1ac2d77aedf0d79eb4780477a77b7786cdaf  
+**After-refactoring scan / workflow run(s):** *Lab6 - Pylint* and *Lab6 - Tests* on `706a1ac2`: https://github.com/anstieger/cornac/actions/runs/44545715336 , https://github.com/anstieger/cornac/actions/runs/44545715214 [TODO: label which link is Pylint and which is Tests]; Pylint outputs also committed in `lab6/lab6-pylint-report-after/`  
+**After-refactoring test/check run(s):** *Lab6 - Tests* (see link above) - **green**: `58 passed, 1 warning`. `first_example.py` after refactoring:
+
+| Model | MAE | RMSE | AUC | MAP | NDCG@10 | Precision@10 | Recall@10 | Train (s) | Test (s) |
+|---|---|---|---|---|---|---|---|---|---|
+| MF | 0.7430 | 0.8998 | 0.7445 | 0.0548 | 0.0761 | 0.0675 | 0.0463 | 0.0235 | 0.8963 |
+| PMF | 0.7534 | 0.9138 | 0.7744 | 0.0671 | 0.0969 | 0.0813 | 0.0639 | 1.6418 | 0.7345 |
+| BPR | 2.0143 | 2.2267 | 0.8695 | 0.1042 | 0.1500 | 0.1110 | 0.1195 | 1.3629 | 0.8773 |
+
+All 21 metric values are identical to the baseline; only the wall-clock times differ (and `Train (s)` is still reported, i.e. `_fit_model` returns the training time correctly).
 
 | Issue / contributor | Before (same scope and measurement) | After | Test / verification result | What does this actually establish? |
 |---|---|---|---|---|
-| | | | | |
-| | | | | |
+| C1 / anstieger (R1) | **Copies of the training step** (verbose message + timed `model.fit`): 3 (BaseMethod, NextItem, Propensity). **Pylint R0801:** 30 duplicate blocks (367 duplicated lines, overlapping); the training step is part of the blocks base-next_item [719:744]/[366:390] (25 lines) and base-propensity [729:742]/[363:377]. **Class metrics (LOC / methods / WMC):** BaseMethod 617 / 32 / 60, NextItem 627 / 7 / 37, Propensity 300 / 6 / 24. **McCabe of `evaluate()`:** 6 / 8 / 9. Tests: 58 passed. | **Copies:** 1 definition (`BaseMethod._fit_model`, McCabe 2) + 3 one-line calls. **R0801:** 28 blocks (333 lines); the base-propensity training block is **gone**, the base-next_item block shrank to [741:761]/[366:385] (20 lines) and now only contains the remaining shared parts (set checks, `_reset()`, evaluation message). **Class metrics:** BaseMethod 634 / 33 / **61**, NextItem 622 / 7 / 36, Propensity 295 / 6 / 23 (sum of the 3 classes: 121 -> 120). **McCabe of `evaluate()`:** 5 / 7 / 8. | Green before and after: 58 passed; `first_example.py` metric values identical (MF RMSE 0.8998, BPR NDCG@10 0.1500, ...). | The training step now has **one owner**: a change to how models are trained or timed is one edit instead of three, and a new evaluation method can call `_fit_model` instead of copying it. It does **not** show that `evaluate()` is no longer duplicated: the set checks, test/validation evaluation and timing of the evaluation are still copied (R0801 still reports them). BaseMethod got slightly *bigger* (+17 LOC, +1 method, WMC +1) because the step moved into it - complexity was moved, not removed. The tests only cover the executed cases (Linux, Python 3.12, MovieLens 100K, the existing test inputs). |
 
 **Answers to the original GQM questions:**
 
-- **Q1:** [answer based on evidence, not only a warning count]
-- **Q2:** [answer based on evidence, not only a warning count]
+- **Q1:** Yes - in `cornac/eval_methods` the same logic is repeated across the evaluation classes: Pylint found 30 duplicate blocks, most of them between `base_method`, `next_item_evaluation` and `next_basket_evaluation`. Source inspection shows that the important ones come from creating new evaluation methods by copying `BaseMethod` code: the `evaluate()` workflow (3 copies), the item-mask logic of `ranking_eval`, and the dataset building in `_build_datasets`. The strongest evidence is not the count but C3: two copied blocks in `NextBasketEvaluation` were adapted wrongly, so duplication has already caused a defect. About 6 of the 30 blocks are harmless constructor boilerplate. After R1, one of these duplications (the training step) has one owner; the rest remains.
+- **Q2:** Mainly `BaseMethod`: 32 instance attributes (Pylint R0902, limit 7), 617 LOC, 32 methods and the highest WMC (60). Inspection shows at least four groups of responsibilities (split configuration, datasets/ID maps, 10 modalities, evaluation workflow), and its GitHub history shows changes for these different reasons - a reasoned Divergent Change candidate, not a tool-proven God Class (ATFD/TCC not measured). `NextItemEvaluation` is large too (627 LOC, WMC 37) but because of a few complex methods (`from_timestamps` 12), not because of many responsibilities. The responsibilities of `BaseMethod` were **not** split in Lab 6 (deferred, high risk).
 
-**Conclusion and limits:** [What was improved? Did any measurements worsen or remain unchanged? What cannot be claimed about maintainability or preserved behavior?]
+**Conclusion and limits:** R1 removed one verified duplication (the training step of `evaluate()`) with a small, behavior-preserving Extract Method: tests and example metrics are identical before and after, and the duplicate block between `base_method` and `propensity` disappeared. Some measurements stayed the same or got worse: R0801 went only from 30 to 28 blocks, `BaseMethod` grew slightly (LOC 617 -> 634, WMC 60 -> 61), and the Large Class / Divergent Change concern (C2) is unchanged. Pylint's assignment of duplicate blocks to file pairs also shifted between the runs (e.g. next_basket-next_item 8 -> 4 although that file was not changed), because a block that exists in 3 files is reported for only one pair - so per-pair counts are not a reliable before/after measure, only the specific blocks are. What cannot be claimed: that `cornac/eval_methods` is now *measurably* more maintainable overall, or that behavior is preserved in all cases (only the tested executions were checked). The C3 defect is still open and should be fixed in a separate, tested bug-fix commit.
 
 ### Individual implementation commits - permanent GitHub links
 
@@ -113,10 +131,9 @@
 
 | Contributor / GitHub account            | Documented issue (C1, C2, ...) | What was refactored? | **Permanent commit link**                       | PR or GitHub Actions push-run link |     |
 | --------------------------------------- | ------------------------------ | -------------------- | ----------------------------------------------- | ---------------------------------- | --- |
-| Student 1                               |                                |                      | `https://github.com/OWNER/REPO/commit/FULL_SHA` |                                    |     |
-| Student 1 (second issue, if applicable) |                                |                      |                                                 |                                    |     |
+| Antonia Stieger / [anstieger](https://github.com/anstieger) | C1 | Extract Method `BaseMethod._fit_model` (training step of `evaluate()` in 3 classes) | https://github.com/anstieger/cornac/commit/706a1ac2d77aedf0d79eb4780477a77b7786cdaf | Pylint + Tests push runs: https://github.com/anstieger/cornac/actions/runs/44545715336 , https://github.com/anstieger/cornac/actions/runs/44545715214 |
 
-**Completed template location on `semester-investigation`:** [GitHub file URL]  
-**Template/report commit link:** [GitHub `/commit/FULL_SHA` URL]
+**Completed template location on `semester-investigation`:** https://github.com/anstieger/cornac/blob/semester-investigation/lab6/LAB6_ANALYSIS.md  
+**Template/report commit link:** [TODO: `/commit/FULL_SHA` link of the final commit that adds this file to `semester-investigation`]
 
-**Evidence preservation note:** [If any GitHub Actions artifact is relevant, provide a run link and preserve its essential figures here because workflow artifacts can expire.]
+**Evidence preservation note:** The Pylint artifacts (`lab6-pylint-report`) of the baseline and the after run are committed in `lab6/lab6-pylint-report/` and `lab6/lab6-pylint-report-after/`; the essential figures (R0801 counts, class metrics, test results, example tables) are copied into this file because Actions artifacts expire after 30 days.

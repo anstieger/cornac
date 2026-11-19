@@ -361,12 +361,7 @@ class PropensityStratifiedEvaluation(BaseMethod):
         ###########
         # FITTING #
         ###########
-        if self.verbose:
-            print("\n[{}] Training started!".format(model.name))
-
-        start = time.time()
-        model.fit(self.train_set, self.val_set)
-        train_time = time.time() - start
+        self._fit_model(model)
 
         ##############
         # EVALUATION #
