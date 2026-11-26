@@ -91,8 +91,8 @@ def _load_model(instance_path):
         "Model loaded"
         if train_set is None
         else """
-        Model and train set loaded. Remove seen items by adding
-        'remove_seen=true' query param to the recommend endpoint.
+        Model and train set loaded. Seen items are removed from recommendations
+        by default; add 'remove_seen=false' to the recommend endpoint to keep them.
         """
     )
 
@@ -127,7 +127,11 @@ def recommend():
     params = request.args
     uid = params.get("uid")
     k = int(params.get("k", -1))
-    remove_seen = params.get("remove_seen", "false").lower() == "true"
+    # Seen items are removed by default whenever the train set is available, so
+    # clients are not recommended items the user has already interacted with.
+    # They can still be requested explicitly with remove_seen=false.
+    default_remove_seen = "true" if train_set is not None else "false"
+    remove_seen = params.get("remove_seen", default_remove_seen).lower() == "true"
 
     if uid is None:
         return "uid is required", 400
