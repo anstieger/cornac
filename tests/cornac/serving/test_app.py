@@ -64,7 +64,8 @@ def test_recommend(client):
     assert len(response.json['recommendations']) == 5
     assert response.json['query']['uid'] == '930'
     assert response.json['query']['k'] == 5
-    assert response.json['query']['remove_seen'] == False
+    # changed in Lab 7: default is now True because the fixture saves the train set
+    assert response.json['query']['remove_seen'] == True
 
 
 # --- Lab 7: seen-item handling of /recommend -------------------------------
@@ -88,8 +89,10 @@ def test_recommend_explicit_remove_seen_unchanged(client):
 
 
 def test_recommend_default_seen_items(client):
-    # documented default: seen items are returned unless remove_seen=true
-    assert _recs(client, "") == _recs(client, "&remove_seen=false")
+    # changed in Lab 7: by default seen items are no longer returned
+    default = _recs(client, "")
+    assert default == _recs(client, "&remove_seen=true")
+    assert not SEEN_930 & set(default)
 
 
 def test_feedback(client):

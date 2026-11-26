@@ -24,8 +24,9 @@ import json
 import sys
 import urllib.request
 
-# The documented default of this version of the server (baseline: False).
-EXPECTED_DEFAULT_REMOVE_SEEN = False
+# The documented default of this version of the server (baseline: False,
+# changed in Lab 7: seen items are hidden by default).
+EXPECTED_DEFAULT_REMOVE_SEEN = True
 
 DATA = "tests/data.txt"
 UID = "930"  # user of the upstream serving test; has interacted with item 709
