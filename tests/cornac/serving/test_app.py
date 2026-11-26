@@ -67,6 +67,31 @@ def test_recommend(client):
     assert response.json['query']['remove_seen'] == False
 
 
+# --- Lab 7: seen-item handling of /recommend -------------------------------
+# User 930 has exactly one training interaction (item 709, see tests/data.txt);
+# the catalogue has 10 items and the fixture saves the model with its train set.
+SEEN_930 = {"709"}
+
+
+def _recs(client, query):
+    response = client.get("/recommend?uid=930&k=-1" + query)
+    assert response.status_code == 200
+    return response.json["recommendations"]
+
+
+def test_recommend_explicit_remove_seen_unchanged(client):
+    # invariant: explicit requests behave the same in every version
+    keep_seen = _recs(client, "&remove_seen=false")
+    hide_seen = _recs(client, "&remove_seen=true")
+    assert len(keep_seen) == 10 and SEEN_930 <= set(keep_seen)
+    assert hide_seen == [i for i in keep_seen if i not in SEEN_930]
+
+
+def test_recommend_default_seen_items(client):
+    # documented default: seen items are returned unless remove_seen=true
+    assert _recs(client, "") == _recs(client, "&remove_seen=false")
+
+
 def test_feedback(client):
     response = client.post('/feedback?uid=930&iid=795&rating=5')
     assert response.status_code == 200

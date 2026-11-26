@@ -1,0 +1,114 @@
+# Lab #7 - deploy the Cornac model server from THIS fork's commit on a clean
+# GitHub-hosted Ubuntu runner and verify the /recommend behaviour.
+#  1. check out the pushed commit and prove which code is installed (SHA, module paths)
+#  2. build Cornac's Cython extensions + editable install from the checkout (no PyPI cornac)
+#  3. train a tiny BPR model on the repo fixture tests/data.txt (no download, CPU, seconds)
+#  4. start the real Flask server (cornac/serving/app.py) and call it over HTTP
+#  5. run the upstream tests of this path (serving app + Recommender.recommend)
+# The upstream "python-package" workflow is not used: it runs only on master and a
+# 15-job OS x Python matrix of the whole test suite.
+name: Lab7 - Delivery
+
+on:
+  push:
+    branches:
+      - semester-investigation
+      - 'lab7-*'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-and-verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out this exact revision
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Record revision and environment
+        run: |
+          echo "GITHUB_SHA     = $GITHUB_SHA"
+          echo "checked-out HEAD = $(git rev-parse HEAD)"
+          echo "branch         = $GITHUB_REF_NAME"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          lsb_release -d; python --version
+          echo "--- default seen-item rule in the code being deployed:"
+          grep -n 'remove_seen = ' cornac/serving/app.py
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip wheel setuptools
+          python -m pip install Cython "numpy>2.0.0" scipy
+
+      - name: Build extensions and install Cornac from this checkout
+        run: |
+          start=$(date +%s)
+          python setup.py build_ext -j4
+          python -m pip install -e .[tests]
+          echo "BUILD_SECONDS=$(( $(date +%s) - start ))" >> "$GITHUB_ENV"
+          echo "build + install took $(( $(date +%s) - start )) s"
+
+      - name: Verify the executed code comes from the checkout
+        run: |
+          python - <<'PY'
+          import importlib.util, os, cornac, numpy, scipy, flask
+          from importlib.metadata import version
+          ws = os.environ["GITHUB_WORKSPACE"]
+          app = importlib.util.find_spec("cornac.serving.app").origin
+          print("cornac", cornac.__version__, "from", cornac.__file__)
+          print("serving app from", app)
+          print("numpy", numpy.__version__, "scipy", scipy.__version__, "Flask", version("flask"))
+          assert cornac.__file__.startswith(ws) and app.startswith(ws), "not the fork's code!"
+          PY
+
+      - name: Prepare model (BPR on tests/data.txt, saved with train set)
+        run: |
+          MODEL_PATH="$PWD/$(python lab7/lab7_serve_check.py prepare | tail -n 1)"
+          ls -l "$MODEL_PATH" "$MODEL_PATH.trainset"
+          echo "MODEL_PATH=$MODEL_PATH" >> "$GITHUB_ENV"
+
+      - name: Start the Cornac server (Flask, cornac/serving/app.py)
+        env:
+          MODEL_CLASS: cornac.models.BPR
+        run: |
+          start=$(date +%s%N)
+          nohup flask --app cornac.serving.app run --host 127.0.0.1 --port 8080 > server.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -s -o /dev/null "http://127.0.0.1:8080/recommend?uid=930&k=1"; then break; fi
+            sleep 1
+          done
+          echo "server ready after $(( ($(date +%s%N) - start) / 1000000 )) ms"
+          cat server.log
+
+      - name: Functional case - call /recommend over HTTP and check behaviour
+        run: python lab7/lab7_serve_check.py check --url http://127.0.0.1:8080
+
+      - name: Upstream tests of this path (serving app + Recommender.recommend)
+        if: always()
+        run: python -m pytest tests/cornac/serving/test_app.py tests/cornac/models/test_recommender.py -v -p no:cacheprovider
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Lab 7 delivery - \`$GITHUB_SHA\`"
+            echo "build + install: ${BUILD_SECONDS:-?} s"
+            echo '```json'
+            python -c "import json;e=json.load(open('lab7_evidence.json'));print(json.dumps({k:e[k] for k in ['seen_items','old_contract_holds','new_contract_holds','expected_default_remove_seen','invariants']},indent=1));print('default response:',e['responses']['default_all']['recommendations'])" || echo "no evidence file"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lab7-evidence-${{ github.sha }}
+          path: |
+            lab7_evidence.json
+            server.log
